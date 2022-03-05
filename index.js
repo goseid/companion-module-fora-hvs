@@ -129,7 +129,10 @@ class instance extends instance_skel {
 	}
 
 	initVariables() {
+		this.addLabelVarables(this.config.model);
 		this.setVariableDefinitions(this.getVariableList(this.config.model));
+		this.getVariables(this.config.model);
+		this.setVariable("Src50", "MV");
 	}
 
 	/**
@@ -162,20 +165,40 @@ class instance extends instance_skel {
 				this.socket
 					.on("message", (message) => {
 						if (message.type == "utf8") {
-							message.utf8Data
-								.split(",")
-								.map((item) => item.trim())
-								.forEach((item) => {
-									this.debug(`Data recieved: "${item}"`);
-									if (item.match('^[A-Za-z0-9_:]*$') !== null) {
-										let result = this.parseVariable(item);
-										if (result !== null) {
-											this.setVariable(result[0], result[1]);
-										}
-									} else {
-										this.dataRecieved(item);
-									}
-								});
+							try {
+								if (message.utf8Data.indexOf("SIGNAL_GROUP") > 0) {
+									const data = message.utf8Data.slice(message.utf8Data.indexOf(":") + 1);
+									const signalNames = JSON.parse(data);
+									console.dir({'signalNames': signalNames});
+									this.updateLabels(signalNames, this.config.model)
+										.forEach(e => {
+											this.setVariable(e.key, e.value);
+										});
+								} else {
+									message.utf8Data
+										.split(",")
+										.map((item) => item.trim())
+										.forEach((item) => {
+											if (message.utf8Data.indexOf("ME_XPT_ME") < 0) {
+												// Skip these messages to keep the log clean
+												this.debug(`Data recieved: "${item}"`);
+											}
+											if (item.match('^[A-Za-z0-9_:]*$') !== null) {
+												let result = this.parseVariable(item);
+												if (result !== null) {
+													this.setVariable(result[0], result[1]);
+												}
+											} else {
+												this.dataRecieved(item);
+											}
+										});
+								}
+							} catch (e) {
+								if (e) {
+									console.error(e);
+									console.dir(message);
+								}
+							}
 						}
 					})
 					.on("error", (error) => {
@@ -193,6 +216,9 @@ class instance extends instance_skel {
 				// Get the initial state data
 				this.socket.send(
 					this.getCommandForAction(this.config.model, "get_state", null)
+				);
+				this.socket.send(
+					this.getCommandForAction(this.config.model, "get_labels", null)
 				);
 			})
 			.on("connectFailed", (errorDescription) => {

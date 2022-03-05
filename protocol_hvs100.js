@@ -2,6 +2,7 @@ module.exports = {
 	HVS100: {
 		COMMANDS: {
 			GET_INPUTS: "GET.SIGNAL_GROUP2",
+			GET_LABELS: "GET.SIGNAL_GROUP4",
 			GET_STATE: "GET.ALLDATA_ME_XPT",
 			REBOOT: "CMD.020503",
 			// event: 2-digit hex for the selected event
@@ -26,14 +27,14 @@ module.exports = {
 		},
 		ME_LAYERS: { A: "A", B: "B" },
 		AUXES: [
-			{ id: 1, label: "Aux 1" },
-			{ id: 2, label: "Aux 2" },
-			{ id: 3, label: "Aux 3" },
-			{ id: 4, label: "Aux 4" },
-			{ id: 5, label: "Aux 5" },
-			{ id: 6, label: "Aux 6" },
-			{ id: 7, label: "Aux 7" },
-			{ id: 8, label: "Aux 8" },
+			{ id: 1, label: "Aux 1", no: 240 },
+			{ id: 2, label: "Aux 2", no: 241 },
+			{ id: 3, label: "Aux 3", no: 242 },
+			{ id: 4, label: "Aux 4", no: 243 },
+			{ id: 5, label: "Aux 5", no: 244 },
+			{ id: 6, label: "Aux 6", no: 245 },
+			{ id: 7, label: "Aux 7", no: 246 },
+			{ id: 8, label: "Aux 8", no: 247 },
 		],
 		VARIABLES: [
 			{ label: 'Last event to be recalled', name: 'event_recall' },

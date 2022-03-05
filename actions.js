@@ -278,8 +278,48 @@ module.exports = {
 		return [key, value];
 	},
 
+	updateLabels: (signals, model) => {
+		const updates = [];
+		protocol[model].VARIABLES
+			.filter(v => v.hasOwnProperty("id"))
+			.forEach(variable => {
+				const s = signals.find(e => e.no === variable.id);
+				if (s) {
+					updates.push({ key: variable.name, value: s.sName });
+				}
+			});
+		// console.dir({ updates: updates });
+		return updates;
+	},
+
+	addLabelVarables: (model) => {
+		protocol[model].SOURCES_AUX.forEach(src => {
+			protocol[model].VARIABLES.push({
+				label: `Short name of ${src.label}`,
+				name: `Src${src.id}`,
+				id: src.id
+			});
+		});
+		protocol[model].AUXES.forEach(aux =>
+			protocol[model].VARIABLES.push({
+				label: `Short name of ${aux.label}`,
+				name: `Aux${aux.id}`,
+				id: aux.no
+			})
+		)
+	},
+
 	getVariableList: (model) => {
+		console.log('#################');
+		console.log('### VARIABLES ###');
+		console.log('#################');
+		console.dir(protocol[model].VARIABLES);
 		return protocol[model].VARIABLES;
+	},
+
+	getVariables: (model) => {
+		console.log('VVV Variables? VVV');
+		console.dir(protocol[model].VARIABLES);
 	},
 
 	/**
@@ -297,6 +337,12 @@ module.exports = {
 			case "get_state":
 				command = protocol[model].COMMANDS.GET_STATE || "";
 				break;
+			case "get_inputs":
+				command = protocol[model].COMMANDS.GET_INPUTS || "";
+				break;
+			case "get_labels":
+				command = protocol[model].COMMANDS.GET_LABELS || "";
+				break;
 			case "reboot":
 				command = protocol[model].COMMANDS.REBOOT || "";
 				break;
@@ -304,7 +350,7 @@ module.exports = {
 				let eventInt = parseInt(options.event) + 1; // Although the switcher labels them starting at 0, they are recalled with a 1 base...
 				let eventHex = ("0" + eventInt.toString(16)).slice(-2); // The switcher expects the event Id as a 2-digit hexidecimal
 				command = (protocol[model].COMMANDS.RECALL_EVENT || "")
-					.replace( "{event}", eventHex);
+					.replace("{event}", eventHex);
 				break;
 			case "trans_me":
 				command = (protocol[model].COMMANDS[`TRANS_ME_${options.type}`] || "")

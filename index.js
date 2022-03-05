@@ -3,6 +3,7 @@ const WebSocket = require("websocket").client;
 
 let actions = require("./actions");
 let upgradeScripts = require("./upgrades");
+const fsLog = require("./helpers/fsLog");
 
 /**
  * Companion instance for controling For.A Hanabi Switchers
@@ -154,7 +155,7 @@ class instance extends instance_skel {
 		this.initVariables();
 
 		this.socketClient = new WebSocket();
-
+ 
 		this.socketClient
 			.on("connect", (webSocketConnection) => {
 				this.debug("Websocket connected");
@@ -169,7 +170,10 @@ class instance extends instance_skel {
 								if (message.utf8Data.indexOf("SIGNAL_GROUP") > 0) {
 									const data = message.utf8Data.slice(message.utf8Data.indexOf(":") + 1);
 									const signalNames = JSON.parse(data);
-									console.dir({'signalNames': signalNames});
+									// console.dir({'signalNames': signalNames});
+									// fsLog(this.config.model + " " +
+									// 	message.utf8Data.slice(4,message.utf8Data.indexOf(":")),
+									// 	JSON.parse(data));
 									this.updateLabels(signalNames, this.config.model)
 										.forEach(e => {
 											this.setVariable(e.key, e.value);

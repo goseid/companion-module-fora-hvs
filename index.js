@@ -136,6 +136,30 @@ class instance extends instance_skel {
 		this.setVariable("Src50", "MV");
 	}
 
+	createVariables(signals) {
+		console.log("### CREATING SIGNALS ###");
+		const variables = [];
+		signals.forEach(s => {
+			const v = {};
+			if (s.no === 0) {
+				v.name = "BLK";
+				v.label = "Short name of BLACK"
+			} else if (s.no < 29) {
+				v.name = "In" + s.no.toString().padStart(2, "0");
+				v.label = "Short name of input " + s.no;
+			} else if (s.no < 240) {
+				v.name = s.sName;
+				v.label = "Short name of " + s.lName.toString().trim();
+			} else {
+				v.name = "Aux" + s.no;
+				v.label = "Short name of " + s.no;
+			}
+			v.no = s.no;
+			variables.push(v);
+		});
+		fsLog(this.config.model + " VARIABLES", variables);
+	}
+
 	/**
 	 * Initialize the websocket connection to the server
 	 */
@@ -155,7 +179,7 @@ class instance extends instance_skel {
 		this.initVariables();
 
 		this.socketClient = new WebSocket();
- 
+
 		this.socketClient
 			.on("connect", (webSocketConnection) => {
 				this.debug("Websocket connected");
@@ -174,6 +198,8 @@ class instance extends instance_skel {
 									// fsLog(this.config.model + " " +
 									// 	message.utf8Data.slice(4,message.utf8Data.indexOf(":")),
 									// 	JSON.parse(data));
+									// this.createVariables(signalNames);
+									createLabels(signalNames);
 									this.updateLabels(signalNames, this.config.model)
 										.forEach(e => {
 											this.setVariable(e.key, e.value);

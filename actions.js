@@ -283,6 +283,25 @@ module.exports = {
 	},
 
 	/**
+	 * Process labels, match with variables and return array to update
+	 * @param {Object[]} signals - Array of signal names from switcher
+	 * @param {string} model - The model of switcher to get the command for
+	 * @returns {Object[]} - Array of {variable, value} to be updated
+	 */
+	 updateLabels: (signals, model) => {
+		const updates = [];
+		protocol[model].VARIABLES
+			.filter(v => v.hasOwnProperty("no"))
+			.forEach(variable => {
+				const s = signals.find(e => e.no === variable.no);
+				if (s) {
+					updates.push({name: variable.name, value: s.sName});
+				}
+			});
+		return updates;
+	},
+
+	/**
 	 * Return the command string fot the provided action
 	 * @param {string} model - The model of switcher to get the command for
 	 * @param {string} action - The id of the action we want a command for
@@ -297,6 +316,9 @@ module.exports = {
 			case "get_state":
 				command = protocol[model].COMMANDS.GET_STATE || "";
 				break;
+			case "get_labels":
+				command = protocol[model].COMMANDS.GET_LABELS || "";
+				break;
 			case "reboot":
 				command = protocol[model].COMMANDS.REBOOT || "";
 				break;
@@ -304,7 +326,7 @@ module.exports = {
 				let eventInt = parseInt(options.event) + 1; // Although the switcher labels them starting at 0, they are recalled with a 1 base...
 				let eventHex = ("0" + eventInt.toString(16)).slice(-2); // The switcher expects the event Id as a 2-digit hexidecimal
 				command = (protocol[model].COMMANDS.RECALL_EVENT || "")
-					.replace( "{event}", eventHex);
+					.replace("{event}", eventHex);
 				break;
 			case "trans_me":
 				command = (protocol[model].COMMANDS[`TRANS_ME_${options.type}`] || "")

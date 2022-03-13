@@ -2,6 +2,7 @@ module.exports = {
 	HVS100: {
 		COMMANDS: {
 			GET_INPUTS: "GET.SIGNAL_GROUP2",
+			GET_LABELS: "GET.SIGNAL_GROUP4",
 			GET_STATE: "GET.ALLDATA_ME_XPT",
 			REBOOT: "CMD.020503",
 			// event: 2-digit hex for the selected event

@@ -1,5 +1,6 @@
 const instance_skel = require("../../instance_skel");
 const WebSocket = require("websocket").client;
+const goLog = require("./goLog");
 
 let actions = require("./actions");
 let upgradeScripts = require("./upgrades");
@@ -129,7 +130,10 @@ class instance extends instance_skel {
 	}
 
 	initVariables() {
-		this.setVariableDefinitions(this.getVariableList(this.config.model));
+		const vars = this.getVariableList(this.config.model);
+		this.setVariableDefinitions(vars);
+		vars.filter(v => v.hasOwnProperty("default"))
+			.forEach(e => this.setVariable(e.name, e.default));
 	}
 
 	/**
@@ -162,6 +166,19 @@ class instance extends instance_skel {
 				this.socket
 					.on("message", (message) => {
 						if (message.type == "utf8") {
+							if (goLog) {
+								goLog.msg(message.utf8Data, this.config.model);
+							} else {
+								console.error("NO goLog???");
+								goLog.msg(message.utf8Data, this.config.model);
+							}
+							if (message.utf8Data.indexOf("SIGNAL_GROUP")>0){
+								const signalNames = JSON.parse(
+									message.utf8Data.substring(message.utf8Data.indexOf(":")+1)
+								);
+								this.updateLabels(signalNames, this.config.model)
+									.forEach(e => this.setVariable(e.name, e.value));
+							} else {
 							message.utf8Data
 								.split(",")
 								.map((item) => item.trim())
@@ -176,6 +193,7 @@ class instance extends instance_skel {
 										this.dataRecieved(item);
 									}
 								});
+							}
 						}
 					})
 					.on("error", (error) => {
@@ -193,6 +211,9 @@ class instance extends instance_skel {
 				// Get the initial state data
 				this.socket.send(
 					this.getCommandForAction(this.config.model, "get_state", null)
+				);
+				this.socket.send(
+					this.getCommandForAction(this.config.model, "get_labels", null)
 				);
 			})
 			.on("connectFailed", (errorDescription) => {

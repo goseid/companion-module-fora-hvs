@@ -17,16 +17,17 @@ function logMessage(message, model) {
     const msgLabel = firstColon ?
         " " + message.substr(0, firstColon) :
         "";
-    writeFile(`${model}/${ds + msgLabel}.msg`, message);
+    // writeFile(`${model}/${ds + msgLabel}.msg`, message);
     fs.appendFileSync(BASE_PATH + model + LOG_FILE, `${ds} ${message}\n`, (err) => {
         console.error("ERROR Appending to log", err.message);
     });
     try {
         const name = message.substr(0, firstColon);
-        if (name.includes("_FADE_LV")) return;
-
-        const o = JSON.parse(message.substring(firstColon + 1));
-        if (JSON.stringify(o).length > 2) {
+        // if (name.includes("_FADE_LV")) return;
+        const fc = message.substr(firstColon+1,1);
+console.log("FIRST CHARACTER -------------------------------------------------------->", fc)        ;
+        if (fc==="[" || fc==="{") {
+            const o = JSON.parse(message.substring(firstColon + 1));
             logObject(name, o, model, ds);
             if (name.includes("SET.SIGNAL_GROUP")) {
                 logTabSeparated(name, o, ["no", "sName", "lName"], model, ds);
@@ -49,14 +50,14 @@ function logTabSeparated(name, array, columns, model, dateString = getDateString
         ...array.sort((a, b) => a.no - b.no)
             .map(obj =>
                 columns.reduce(
-                    (acc, key) => `${acc}${!acc.length ? '' : delimiter}${!obj[key] ? '' : obj[key]}`,
+                    (acc, key) => `${acc}${!acc.length ? '' : delimiter}${!obj[key].toString() ? '' : obj[key]}`,
                     ''
                 )
             )
     ].join('\n');
     console.log("TAB SEPARATED:");
     console.log(text);
-    writeFile(`${model}/tab ${dateString} ${name}.tsv`, text);
+    writeFile(`${model}/${model} names ${dateString} ${name}.tsv`, text);
 
 }
 

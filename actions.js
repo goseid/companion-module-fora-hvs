@@ -7,6 +7,9 @@ let protocol = {
 };
 
 module.exports = {
+	getProtocol: (model) => {
+		return protocol[model];
+	},
 	/**
 	 * Build the list of actions
 	 * @param {string} model - The model we are requesting actions for
@@ -239,6 +242,115 @@ module.exports = {
 	},
 
 	/**
+	 * Build the list of feedbacks
+	 * @param {string} model - The model we are requesting actions for
+	 * @returns {Object} - The feedbacks
+	 */
+	getFeedbacks: (instance, model, state) => {
+		//console.log('................................................................GettingFeedbacks');
+		state.fromActions = "added from actions.js";
+		// console.log('........................................................added State from Actions');
+		// Global feedbacks
+		const feedbacks = {}
+		feedbacks['me_pgm_src'] = {
+			type: 'boolean',
+			label: 'ME PGM Source',
+			description: 'If the source of the Program Bus of the specifed ME matches the specified input, change the style',
+			style: {
+				color: instance.rgb(255, 255, 255),
+				bgcolor: instance.rgb(255, 0, 0)
+			},
+			options: [
+				{
+					type: "dropdown",
+					label: "ME",
+					id: "me",
+					default: 1,
+					choices: protocol[model].MES
+				},
+				{
+					type: "dropdown",
+					label: "Source",
+					id: "source",
+					default: 1,
+					choices: protocol[model].SOURCES_ME
+				},
+			],
+
+			callback: (feedback, btnProps, btnInfo) => {
+				const MELayerSource = protocol[model].MES.find(ME => ME.id == feedback.options.me)['A'].source;
+				console.log("MELayerSource:", MELayerSource, 'f.o.s:', feedback.options.source, feedback.options.source === MELayerSource);
+				return feedback.options.source === MELayerSource;
+			}
+		};
+		feedbacks['me_pvw_src'] = {
+			type: 'boolean',
+			label: 'ME PVW Source',
+			description: 'If the source of the Program Bus of the specifed ME matches the specified input, change the style',
+			style: {
+				color: instance.rgb(0,0,0),
+				bgcolor: instance.rgb(0, 255, 0)
+			},
+			options: [
+				{
+					type: "dropdown",
+					label: "ME",
+					id: "me",
+					default: 1,
+					choices: protocol[model].MES
+				},
+				{
+					type: "dropdown",
+					label: "Source",
+					id: "source",
+					default: 1,
+					choices: protocol[model].SOURCES_ME
+				},
+			],
+
+			callback: (feedback, btnProps, btnInfo) => {
+				const MELayerSource = protocol[model].MES.find(ME => ME.id == feedback.options.me)['B'].source;
+				console.log("MELayerSource:", MELayerSource, 'f.o.s:', feedback.options.source, feedback.options.source === MELayerSource);
+				return feedback.options.source === MELayerSource;
+			}
+		};
+		feedbacks[`aux_src`] = {
+			type: 'boolean',
+			label: 'Aux Source',
+			description: 'If the source of the aux matches the specified input, change the style',
+			style: {
+				color: instance.rgb(255, 255, 255),
+				bgcolor: instance.rgb(0, 0, 255)
+			},
+			options: [
+				// {type: 'number', label: "Number", id: "number", default: 1},
+				{
+					type: 'dropdown',
+					label: 'Aux',
+					id: 'aux',
+					default: 1,
+					choices: protocol[model].AUXES
+				},
+				{
+					type: 'dropdown',
+					label: 'Source',
+					id: 'source',
+					default: 1,
+					choices: protocol[model].SOURCES_AUX
+				}
+			],
+			callback: (feedback, btnProps, btnInfo) => {
+				const auxSrc = protocol[model].AUXES.find(aux => aux.id == feedback.options.aux).source.no;
+				return feedback.options.source === auxSrc;
+			}
+		};
+		// console.log("vvvv feedbacks vvvv");
+		// console.dir(feedbacks);
+		return feedbacks;
+	},
+
+
+	/**
 	 * Process data recieved from the switcher
 	 * @param {string} - The data that was recieved
 	 */
@@ -246,9 +358,60 @@ module.exports = {
 		// TODO: Process this data to populate feedbacks
 	},
 
-	parseVariable: (data) => {
+	generateVariables: (model) => {
+		// console.log(".............................................Source Variables to Add");
+		const auxSources = protocol[model].SOURCES_AUX
+			.sort((a, b) => (a.id > b.id ? 1 : -1));
+		auxSources.forEach(src => {
+			protocol[model].VARIABLES.push({
+				name: 'short_' + src.label.toLowerCase().replace(/ /g, ''),
+				label: 'short name of ' + src.label,
+				default: src.sName,
+				no: src.id
+			});
+		});
+		auxSources.forEach(src => {
+			protocol[model].VARIABLES.push({
+				name: 'long_' + src.label.toLowerCase().replace(/ /g, ''),
+				label: 'long name of ' + src.label,
+				default: src.label,
+				no: src.id
+			});
+		});
+
+		const destinations = protocol[model].AUXES;
+		destinations.forEach(aux => {
+			protocol[model].VARIABLES.push({
+				name: 'short_' + aux.label.toLowerCase().replace(/ /g, ''),
+				label: 'short name of ' + aux.label,
+				default: aux.sName,
+				no: aux.no
+			});
+		});
+		// destinations.push(...protocol[model].)
+		destinations.forEach(dest => {
+			protocol[model].VARIABLES.push({
+				name: dest.label.toLowerCase().replace(/ /g, '') + '_source',
+				label: 'Source active on ' + dest.label,
+			});
+		});
+		protocol[model].MES.forEach(ME => {
+			protocol[model].VARIABLES.push({
+				name: ME.label.toLowerCase().replace(/ /g, '') + '_pgm_source',
+				label: 'Source active on ' + ME.label,
+			});
+			protocol[model].VARIABLES.push({
+				name: ME.label.toLowerCase().replace(/ /g, '') + '_pvw_source',
+				label: 'Source active on ' + ME.label,
+			});
+		});
+		// console.dir(protocol[model].VARIABLES);
+		// console.log("can you see them?");
+		// console.log("STATE from Actions:", state);
+	},
+	parseVariable: (data, model, instance) => {
 		let [key, value] = data.split(':');
-		let aux;
+		let match;
 		// HVS100 Events
 		if (key === 'EVT_SETUP_LAST_RCL_NO') {
 			key = 'event_recall';
@@ -258,17 +421,63 @@ module.exports = {
 			key = 'global_event_recall'
 		}
 		// HVS2000 Local Events
-		else if ((aux = key.match('^ME([1-3])_EVENT_LASTRECALL_NO$')) !== null) {
-			key = `me_${aux[1]}_event_recall`;
+		else if ((match = key.match('^ME([1-3])_EVENT_LASTRECALL_NO$')) !== null) {
+			key = `me_${match[1]}_event_recall`;
 		}
 		// HVS100 & HVS2000 ME Keys
-		else if ((aux = key.match('^M([1-3])K([1-4])_KEYONAIR$')) !== null) {
-			key = `me_${aux[1]}_key_${aux[2]}`;
+		else if ((match = key.match('^M([1-3])K([1-4])_KEYONAIR$')) !== null) {
+			// console.log('^M([1-3])K([1-4])_KEYONAIR$', key, match);
+			key = `me_${match[1]}_key_${match[2]}`;
 			value = value === '0' ? 'off' : 'on';
 		}
+		// HVS100 & ?HVS2000? ME Layer Sources
+		else if ((match = key.match('^ME_XPT_ME([1-4])_BKGD_([A-B])$')) !== null) {
+			// console.log(protocol[model].VARIABLES);
+			// console.log('^ME_XPT_AUX([1-9]|1[0-8])', key, res[1], value);
+			const meNumber = match[1];
+			switch (layer = match[2]) {
+				case "A":
+					bus = "pgm";
+					break;
+				case "B":
+					bus = "pvw";
+					break;
+				default:
+					console.error('unexpected layer in ' + data, layer);
+					break;
+			}
+			key = `me${meNumber}_${bus}_source`;
+			const source = protocol[model].VARIABLES.find(el => el.no == value);
+			const me = protocol[model].MES.find(el => el.id == meNumber);
+			if (!me[layer]) {
+				me[layer] = { source: parseInt(value) };
+			} else {
+				me[layer].source = parseInt(value);
+			}
+			value = source.default;
+			console.log(data, meNumber, layer, bus);
+			console.dir(me);
+
+			// key = 'me' + auxNumber + '_source';
+			// const source = protocol[model].VARIABLES.find(el => el.no == value);
+			// value = source.default;
+			// const aux = protocol[model].AUXES.find(el => el.id == auxNumber);
+			// aux.source = source;
+			instance.checkFeedbacks(`me_${bus}_src`);
+		}
+		// HVS100 & ?HVS2000? Aux 1-18 Sources 
+		else if ((match = key.match('^ME_XPT_AUX([1-9]|1[0-8])')) !== null) {
+			let auxNumber = match[1];
+			key = 'aux' + auxNumber + '_source';
+			const source = protocol[model].VARIABLES.find(el => el.no == value);
+			value = source.default;
+			const aux = protocol[model].AUXES.find(el => el.id == auxNumber);
+			aux.source = source;
+			instance.checkFeedbacks('aux_src');
+		}
 		// HVS2000 Flex Keys
-		else if ((aux = key.match('^FLX([1-4])_KEYONAIR$')) !== null) {
-			key = `flex_key_${aux[1]}`;
+		else if ((match = key.match('^FLX([1-4])_KEYONAIR$')) !== null) {
+			key = `flex_key_${match[1]}`;
 			value = value === '0' ? 'off' : 'on';
 		}
 		else {
@@ -288,14 +497,18 @@ module.exports = {
 	 * @param {string} model - The model of switcher to get the command for
 	 * @returns {Object[]} - Array of {variable, value} to be updated
 	 */
-	 updateLabels: (signals, model) => {
+	updateLabels: (signals, model) => {
 		const updates = [];
 		protocol[model].VARIABLES
 			.filter(v => v.hasOwnProperty("no"))
 			.forEach(variable => {
-				const s = signals.find(e => e.no === variable.no);
+				const s = signals.find(e => e.no === variable.no && variable.name.includes('short'));
 				if (s) {
-					updates.push({name: variable.name, value: s.sName});
+					updates.push({ name: variable.name, value: s.sName });
+				}
+				const l = signals.find(e => e.no === variable.no && variable.name.includes('long'));
+				if (l) {
+					updates.push({ name: variable.name, value: l.lName });
 				}
 			});
 		return updates;

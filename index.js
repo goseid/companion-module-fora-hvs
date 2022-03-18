@@ -3,7 +3,9 @@ const WebSocket = require("websocket").client;
 const goLog = require("./goLog");
 
 let actions = require("./actions");
+let presets = require("./presets");
 let upgradeScripts = require("./upgrades");
+
 
 /**
  * Companion instance for controling For.A Hanabi Switchers
@@ -27,6 +29,7 @@ class instance extends instance_skel {
 			{ id: "HVS2000", label: "HVS 2000" },
 		];
 
+		this.state = { info: "new state" };
 		this.reconnecting = null;
 
 		Object.assign(this, {
@@ -130,10 +133,18 @@ class instance extends instance_skel {
 	}
 
 	initVariables() {
+		this.state.fromIndex = "Added from index.js";
+		this.generateVariables(this.config.model);
 		const vars = this.getVariableList(this.config.model);
 		this.setVariableDefinitions(vars);
 		vars.filter(v => v.hasOwnProperty("default"))
 			.forEach(e => this.setVariable(e.name, e.default));
+	}
+
+	initFeedbacks() {
+		this.setFeedbackDefinitions(this.getFeedbacks(this, this.config.model, this.state));
+		// console.log("STATE from INDEX.JS");
+		// console.dir(this.state);
 	}
 
 	/**
@@ -153,6 +164,7 @@ class instance extends instance_skel {
 		}
 
 		this.initVariables();
+		this.initFeedbacks();
 
 		this.socketClient = new WebSocket();
 
@@ -161,6 +173,7 @@ class instance extends instance_skel {
 				this.debug("Websocket connected");
 				this.log("info", "Switcher conected");
 				this.status(this.STATUS_OK);
+				if (goLog) goLog.msg("// CONNECTED", this.config.model);
 
 				this.socket = webSocketConnection;
 				this.socket
@@ -172,27 +185,31 @@ class instance extends instance_skel {
 								console.error("NO goLog???");
 								goLog.msg(message.utf8Data, this.config.model);
 							}
-							if (message.utf8Data.indexOf("SIGNAL_GROUP")>0){
+							if (message.utf8Data.indexOf("SIGNAL_GROUP") > 0) {
 								const signalNames = JSON.parse(
-									message.utf8Data.substring(message.utf8Data.indexOf(":")+1)
+									message.utf8Data.substring(message.utf8Data.indexOf(":") + 1)
 								);
 								this.updateLabels(signalNames, this.config.model)
 									.forEach(e => this.setVariable(e.name, e.value));
+							} else if (message.utf8Data.indexOf("ME_XPT_AUX") > 0) {
+
+								this.checkFeedbacks('aux_src');
 							} else {
-							message.utf8Data
-								.split(",")
-								.map((item) => item.trim())
-								.forEach((item) => {
-									this.debug(`Data recieved: "${item}"`);
-									if (item.match('^[A-Za-z0-9_:]*$') !== null) {
-										let result = this.parseVariable(item);
-										if (result !== null) {
-											this.setVariable(result[0], result[1]);
+								message.utf8Data
+									.split(",")
+									.map((item) => item.trim())
+									.forEach((item) => {
+										this.debug(`Data recieved: "${item}"`);
+										if (item.match('^[A-Za-z0-9_:]*$') !== null) {
+											// console.log("MATCH:",item);
+											let result = this.parseVariable(item, this.config.model, this);
+											if (result !== null) {
+												this.setVariable(result[0], result[1]);
+											}
+										} else {
+											this.dataRecieved(item);
 										}
-									} else {
-										this.dataRecieved(item);
-									}
-								});
+									});
 							}
 						}
 					})
@@ -207,21 +224,28 @@ class instance extends instance_skel {
 						this.log("warn", "Disconnected from switcher");
 						this.status(this.STATUS_ERROR);
 						this.reconnect.bind(this, true);
+						this.reconnect(true);
 					});
 				// Get the initial state data
+				// console.log(`sending[${this.getCommandForAction(this.config.model, "get_state", null)}]`);
 				this.socket.send(
 					this.getCommandForAction(this.config.model, "get_state", null)
 				);
+				// console.log(`sending[${this.getCommandForAction(this.config.model, "get_labels", null)}]`);
 				this.socket.send(
 					this.getCommandForAction(this.config.model, "get_labels", null)
 				);
+				console.log('=====================================PROTOCOL=============================');
+				this.setPresetDefinitions(presets.getPresets(this.getProtocol(this.config.model)));
 			})
 			.on("connectFailed", (errorDescription) => {
 				this.debug(`Websocket connection failed: ${errorDescription}`);
-				this.log("warn", "Connection to switcher failed");
+				this.log("warn", "Connection to switcher failed: "+errorDescription);
 				this.status(this.STATUS_ERROR);
+				this.reconnect();
 			});
 
+		this.status(this.STATUS_WARNING, 'Connecting');
 		this.socketClient.connect(
 			`ws://${this.config.host}:8621/`,
 			null,
@@ -234,6 +258,7 @@ class instance extends instance_skel {
 	 * @param {Boolean} retry_immediately - Immediately try reconnecting, useful if the session may have ended
 	 */
 	reconnect(retry_immediately = false) {
+		console.log("go reconnect");
 		this.log("info", "Attempting to reconnect to switcher");
 		this.disconnect();
 

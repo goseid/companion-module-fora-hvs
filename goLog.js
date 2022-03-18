@@ -11,7 +11,6 @@ module.exports = {
 }
 
 function logMessage(message, model) {
-    console.log("model", model);
     const ds = getDateString();
     const firstColon = message.indexOf(":");
     const msgLabel = firstColon ?
@@ -23,9 +22,7 @@ function logMessage(message, model) {
     });
     try {
         const name = message.substr(0, firstColon);
-        // if (name.includes("_FADE_LV")) return;
         const fc = message.substr(firstColon+1,1);
-console.log("FIRST CHARACTER -------------------------------------------------------->", fc)        ;
         if (fc==="[" || fc==="{") {
             const o = JSON.parse(message.substring(firstColon + 1));
             logObject(name, o, model, ds);
@@ -55,8 +52,6 @@ function logTabSeparated(name, array, columns, model, dateString = getDateString
                 )
             )
     ].join('\n');
-    console.log("TAB SEPARATED:");
-    console.log(text);
     writeFile(`${model}/${model} names ${dateString} ${name}.tsv`, text);
 
 }

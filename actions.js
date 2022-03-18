@@ -288,7 +288,7 @@ module.exports = {
 			label: 'ME PVW Source',
 			description: 'If the source of the Program Bus of the specifed ME matches the specified input, change the style',
 			style: {
-				color: instance.rgb(0,0,0),
+				color: instance.rgb(0, 0, 0),
 				bgcolor: instance.rgb(0, 255, 0)
 			},
 			options: [
@@ -342,6 +342,50 @@ module.exports = {
 			callback: (feedback, btnProps, btnInfo) => {
 				const auxSrc = protocol[model].AUXES.find(aux => aux.id == feedback.options.aux).source.no;
 				return feedback.options.source === auxSrc;
+			}
+		};
+		// console.log('protocol[model].KEYS');
+		// console.log(protocol[model].KEYS);
+		console.log(protocol[model].KEYS.map(
+			el => ({ id: parseInt(el.id.split(",").pop()), label: el.label })
+		))
+		// console.log(protocol[model].KEYS.map(({kid,klabel}) =>({
+		// 	id: parseInt(ME.kid.split(",").pop()),
+		// 	label: klabel
+		// })));
+		feedbacks[`key_active`] = {
+			type: 'boolean',
+			label: 'Keyer Active',
+			description: 'Highlight if the specified keyer is active',
+			style: {
+				color: instance.rgb(255, 255, 255),
+				bgcolor: instance.rgb(255, 0, 0)
+			},
+			options: [
+				{
+					type: "dropdown",
+					label: "ME",
+					id: "me",
+					default: 1,
+					choices: protocol[model].MES
+				},
+				{
+					type: "dropdown",
+					label: "Keyer",
+					id: "keyer",
+					default: 1,
+					choices: protocol[model].KEYS.map(
+						el => ({ id: parseInt(el.id.split(",").pop()), label: el.label })
+					)
+				},
+			],
+			callback: (feedback, btnProps, btnInfo) => {
+				// key = `me_${match[1]}_key_${match[2]}`
+				const v = protocol[model].VARIABLES.find(
+					el => el.name === `me_${feedback.options.me}_key_${feedback.options.keyer}`
+				);
+				console.log("V", v);
+				return v.active;
 			}
 		};
 		// console.log("vvvv feedbacks vvvv");
@@ -428,7 +472,17 @@ module.exports = {
 		else if ((match = key.match('^M([1-3])K([1-4])_KEYONAIR$')) !== null) {
 			// console.log('^M([1-3])K([1-4])_KEYONAIR$', key, match);
 			key = `me_${match[1]}_key_${match[2]}`;
+			const v = protocol[model].VARIABLES.find(el => el.name === key);
+			v.active = parseInt(value);
 			value = value === '0' ? 'off' : 'on';
+			instance.checkFeedbacks('key_active');
+		}
+		// HVS100 & HVS2000 ME Keyer Sources
+		else if ((match = key.match('^ME_XPT_ME([1-3])_KEY([1-4])_([A-B])$')) !== null) {
+			// console.log('^M([1-3])K([1-4])_KEYONAIR$', key, match);
+			const source = protocol[model].VARIABLES.find(el => el.no == value);
+			key = `me_${match[1]}_key_${match[2]}_src`;
+			value = source.default;
 		}
 		// HVS100 & ?HVS2000? ME Layer Sources
 		else if ((match = key.match('^ME_XPT_ME([1-4])_BKGD_([A-B])$')) !== null) {

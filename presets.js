@@ -1,6 +1,39 @@
 module.exports = {
     getPresets: (config) => {
         const presets = [];
+        config.AUXES.forEach(aux => {
+            config.SOURCES_AUX.forEach(source => {
+                presets.push({
+                    category: aux.label,
+                    label: `${source.label} button for ${aux.label}`,
+                    bank: {
+                        style: 'text',
+                        text: `$(fora:long_${source.label.toLowerCase().replace(/ /g, '')})`,
+                        size: '18',
+                        color: '0',
+                        bgcolor: '12632319'
+                    },
+                    feedbacks: [{
+                        type: "aux_src",
+                        options: {
+                            aux: aux.id,
+                            source: source.id,
+                        },
+                        style: {
+                            bgcolor: '255',
+                            color: '16777215',
+                        },
+                    }],
+                    actions: [{
+                        action: "xpt_aux",
+                        options: {
+                            aux: aux.id,
+                            source: source.id
+                        }
+                    }]
+                });
+            });
+        });
         config.MES.forEach(ME => {
             config.SOURCES_ME.forEach(source => {
                 presets.push({
@@ -67,38 +100,37 @@ module.exports = {
                 });
             });
         });
-        config.AUXES.forEach(aux => {
-            config.SOURCES_AUX.forEach(source => {
-                presets.push({
-                    category: aux.label,
-                    label: `${source.label} button for ${aux.label}`,
-                    bank: {
-                        style: 'text',
-                        text: `$(fora:long_${source.label.toLowerCase().replace(/ /g, '')})`,
-                        size: '18',
-                        color: '0',
-                        bgcolor: '12632319'
+        config.KEYS.forEach(keyer => {
+            const keyerNo = parseInt(keyer.id.split(",").pop());
+            presets.push({
+                category: 'Keyers',
+                label: `Toggle ${keyer.label}`,
+                bank: {
+                    style: 'text',
+                    text: `${keyer.label}\\n$(fora:me_1_key_${keyerNo}_src)`,
+                    size: '18',
+                    color: '16744448',
+                    bgcolor: '0'
+                },
+                feedbacks: [{
+                    type: "key_active",
+                    options: {
+                        me: 1,
+                        keyer: keyerNo,
                     },
-                    feedbacks: [{
-                        type: "aux_src",
-                        options: {
-                            aux: aux.id,
-                            source: source.id,
-                        },
-                        style: {
-                            bgcolor: '255',
-                            color: '16777215',
-                        },
-                    }],
-                    actions: [{
-                        action: "xpt_aux",
-                        options: {
-                            aux: aux.id,
-                            source: source.id
-                        }
-                    }]
-                });
-            });
+                    style: {
+                        bgcolor: '16711680',
+                        color: '16777215',
+                    },
+                }],
+                actions: [{
+                    action: "trans_key",
+                    options: {
+                        type: "AUTO",
+                        key: keyer.id,
+                    }
+                }]
+        });
         });
         config.AUXES.forEach(aux => {
             presets.push({
@@ -128,30 +160,30 @@ module.exports = {
                 },
             });
         });
-        config.KEYS.forEach(keyer => {
-            presets.push({
-                category: 'Pages',
-                label: `Set Companion to ${keyer.label} page`,
-                bank: {
-                    style: 'text',
-                    text: `${keyer.label}\\n$(fora:${keyer.label.toLowerCase().replace(/ /g, '')})`,
-                    size: '18',
-                    color: '16744448',
-                    bgcolor: '0'
-                },
-            });
-            presets.push({
-                category: 'Pages',
-                label: `${keyer.label} page active`,
-                bank: {
-                    style: 'text',
-                    text: `${keyer.label}\\n$(fora:${keyer.label.toLowerCase().replace(/ /g, '')})`,
-                    size: '18',
-                    color: '0',
-                    bgcolor: '16744448'
-                },
-            });
-        });
+        // config.KEYS.forEach(keyer => {
+        //     presets.push({
+        //         category: 'Keyers',
+        //         label: `Toggle ${keyer.label}`,
+        //         bank: {
+        //             style: 'text',
+        //             text: `${keyer.label}\\n$(fora:${keyer.label.toLowerCase().replace(/ /g, '')})`,
+        //             size: '18',
+        //             color: '16744448',
+        //             bgcolor: '0'
+        //         },
+        //     });
+        //     presets.push({
+        //         category: 'Keyers',
+        //         label: `${keyer.label} page active`,
+        //         bank: {
+        //             style: 'text',
+        //             text: `${keyer.label}\\n$(fora:${keyer.label.toLowerCase().replace(/ /g, '')})`,
+        //             size: '18',
+        //             color: '0',
+        //             bgcolor: '16744448'
+        //         },
+        //     });
+        // });
         config.MES.forEach(ME => {
             presets.push({
                 category: 'Pages',

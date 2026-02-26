@@ -188,14 +188,14 @@ class forAinstance extends InstanceBase {
 			.split(',')
 			.map((item) => item.trim())
 			.forEach((item) => {
-				//this.log('warn','Data recieved: ' + item)
+				//this.log('warn','Data received: ' + item)
 				if (item.match('^[A-Za-z0-9_:]*$') !== null) {
 					let result = this.parseVariable(item)
 					if (result !== null) {
 						this.setVariableValues({[result[0]]: result[1]})
 					}
 				} else {
-					this.dataRecieved(item)
+					this.dataReceived(item)
 				}
 			})
 		return

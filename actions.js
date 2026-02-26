@@ -404,16 +404,16 @@ module.exports = {
 	},
 
 	/**
-	 * Process data recieved from the switcher
-	 * @param {string} data - The data that was recieved
+	 * Process data received from the switcher
+	 * @param {string} data - The data that was received
 	 */
-	dataRecieved: (data) => {
+	dataReceived: (data) => {
 		// TODO: Process this data to populate feedbacks
 	},
 
 	/**
-	 * Process data recieved from the switcher to update variables
-	 * @param {string} data - The data that was recieved
+	 * Process data received from the switcher to update variables
+	 * @param {string} data - The data that was received
 	 */
 	parseVariable: (data) => {
 		let [key, value] = data.split(':')

@@ -60,6 +60,9 @@ module.exports = {
 			case "get_state":
 				command = protocol[model].COMMANDS.GET_STATE || "";
 				break;
+			case "get_labels":
+				command = protocol[model].COMMANDS.GET_LABELS || "";
+				break;
 			case "reboot":
 				command = protocol[model].COMMANDS.REBOOT || "";
 				break;
@@ -425,17 +428,17 @@ module.exports = {
 	 * Process data received from the switcher
 	 * @param {string} data - The data that was received
 	 */
-	dataReceived: (_data) => {
-		// TODO: Process this data to populate feedbacks
+	dataReceived(data) {
+		this.log("debug", "Non-variable data received: " + data);
 	},
 
 	/**
 	 * Process data received from the switcher to update variables
 	 * @param {string} data - The data that was received
 	 */
-	parseVariable: (data) => {
+	parseVariable(data) {
 		let [key, value] = data.split(":");
-		let aux;
+		let match;
 		// HVS100 Events
 		if (key === "EVT_SETUP_LAST_RCL_NO") {
 			key = "event_recall";
@@ -445,58 +448,90 @@ module.exports = {
 			key = "global_event_recall";
 		}
 		// HVS2000 Local Events
-		else if ((aux = key.match("^ME([1-3])_EVENT_LASTRECALL_NO$")) !== null) {
-			key = `me_${aux[1]}_event_recall`;
+		else if ((match = key.match("^ME([1-3])_EVENT_LASTRECALL_NO$")) !== null) {
+			key = `me_${match[1]}_event_recall`;
 		}
 		// HVS100, HVS390 & HVS2000 ME Keys
-		else if ((aux = key.match("^M([1-3])K([1-4])_KEYONAIR$")) !== null) {
-			key = `me_${aux[1]}_key_${aux[2]}`;
+		else if ((match = key.match("^M([1-3])K([1-4])_KEYONAIR$")) !== null) {
+			key = `me_${match[1]}_key_${match[2]}`;
 			value = value === "0" ? "off" : "on";
+			this.STATE[key] = value;
+			this.checkFeedbacks("key_active");
 		}
 		// HVS100, HVS390 & HVS2000 ME Keys
 		// TODO: Determine difference between M1K1_KEYONAIR and ME_XPT_ME1_KEY1_XPT_PGM_OUT
 		else if (
-			(aux = key.match("^ME_XPT_ME([1-3])_KEY([1-4])_XPT_PGM_OUT$")) !== null
+			(match = key.match("^ME_XPT_ME([1-3])_KEY([1-4])_XPT_PGM_OUT$")) !== null
 		) {
-			key = `me_${aux[1]}_key_${aux[2]}`;
+			key = `me_${match[1]}_key_${match[2]}`;
 			value = value === "0" ? "off" : "on";
+			this.STATE[key] = value;
+			this.checkFeedbacks("key_active");
 		}
 		// HVS100, HVS390 & HVS2000 DVE ME_XPT_ME1_KEY2_DVE_LAMP (Startup Check)
 		else if (
-			(aux = key.match("^ME_XPT_ME([1-3])_KEY([1-4])_DVE_LAMP$")) !== null
+			(match = key.match("^ME_XPT_ME([1-3])_KEY([1-4])_DVE_LAMP$")) !== null
 		) {
-			key = `me_${aux[1]}_key_${aux[2]}_dve`;
+			key = `me_${match[1]}_key_${match[2]}_dve`;
 			value = value === "0" ? "off" : "on";
 		}
 		// HVS100, HVS390 & HVS2000 DVE
-		else if ((aux = key.match("^M([1-3])K([1-4])_POS_SIZE_2DDVE$")) !== null) {
-			key = `me_${aux[1]}_key_${aux[2]}_dve`;
+		else if (
+			(match = key.match("^M([1-3])K([1-4])_POS_SIZE_2DDVE$")) !== null
+		) {
+			key = `me_${match[1]}_key_${match[2]}_dve`;
 			value = value === "OFF" ? "off" : "on";
 		}
-		// HVS100, HVS390 PGM selection
-		else if ((aux = key.match("^ME_XPT_ME([1-3])_BKGD_A$")) !== null) {
-			key = `me_${aux[1]}_pgm_a`;
+		// HVS100, HVS390 & HVS2000 Keyer Sources
+		else if (
+			(match = key.match("^ME_XPT_ME([1-3])_KEY([1-4])_([AB])$")) !== null
+		) {
+			let sourceLabel = this.getSourceLabel(value, this.config.model);
+			key = `me_${match[1]}_key_${match[2]}_src`;
+			value = sourceLabel;
 		}
-		// HVS100, HVS390 PRV selection
-		else if ((aux = key.match("^ME_XPT_ME([1-3])_BKGD_B$")) !== null) {
-			key = `me_${aux[1]}_prv_b`;
+		// HVS100, HVS390 PGM selection
+		else if ((match = key.match("^ME_XPT_ME([1-3])_BKGD_A$")) !== null) {
+			let meNum = match[1];
+			this.STATE[`me_${meNum}_pgm_src`] = parseInt(value);
+			let sourceLabel = this.getSourceLabel(value, this.config.model);
+			this.setVariableValues({
+				[`me${meNum}_pgm_source`]: sourceLabel,
+			});
+			this.checkFeedbacks("me_pgm_src");
+			key = `me_${meNum}_pgm_a`;
+		}
+		// HVS100, HVS390 PVW selection
+		else if ((match = key.match("^ME_XPT_ME([1-3])_BKGD_B$")) !== null) {
+			let meNum = match[1];
+			this.STATE[`me_${meNum}_pvw_src`] = parseInt(value);
+			let sourceLabel = this.getSourceLabel(value, this.config.model);
+			this.setVariableValues({
+				[`me${meNum}_pvw_source`]: sourceLabel,
+			});
+			this.checkFeedbacks("me_pvw_src");
+			key = `me_${meNum}_prv_b`;
+		}
+		// HVS100, HVS390 & HVS2000 AUX source
+		else if ((match = key.match("^ME_XPT_AUX([1-9]|1[0-8])$")) !== null) {
+			let auxNum = match[1];
+			this.STATE[`aux_${auxNum}_src`] = parseInt(value);
+			let sourceLabel = this.getSourceLabel(value, this.config.model);
+			this.setVariableValues({
+				[`aux${auxNum}_source`]: sourceLabel,
+			});
+			this.checkFeedbacks("aux_src");
+			key = `aux${auxNum}_source`;
+			value = sourceLabel;
 		}
 		// HVS2000 Flex Keys
-		else if ((aux = key.match("^FLX([1-4])_KEYONAIR$")) !== null) {
-			key = `flex_key_${aux[1]}`;
+		else if ((match = key.match("^FLX([1-4])_KEYONAIR$")) !== null) {
+			key = `flex_key_${match[1]}`;
 			value = value === "0" ? "off" : "on";
 		} else {
 			return null;
 		}
 
 		return [key, value];
-	},
-
-	/**
-	 * Get the list of possible variables
-	 * @param {string} model - The model we are requesting variables for
-	 */
-	getVariableList: (model) => {
-		return protocol[model].VARIABLES;
 	},
 };

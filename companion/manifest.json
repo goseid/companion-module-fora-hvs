@@ -14,6 +14,7 @@
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-fora-hvs.git",
 	"bugs": "https://github.com/bitfocus/companion-module-fora-hvs/issues",
+	"legacyIds": [],
 	"maintainers": [
 		{
 			"name": "Michael Allen",

@@ -1,3 +1,3 @@
 # companion-module-fora-hvs
 
-See [HELP.md](./HELP.md)
+See [HELP.md](./companion/HELP.md)

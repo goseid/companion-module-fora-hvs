@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Companion module for controlling **For.A Hanabi video switchers** (HVS 100/110, HVS 390, HVS 2000) via an undocumented WebSocket protocol on port 8621. Built on `@companion-module/base` ~1.0.2 for [Bitfocus Companion](https://bitfocus.io/companion).
+Companion module for controlling **For.A Hanabi video switchers** (HVS 100/110, HVS 390, HVS 2000) via an undocumented WebSocket protocol on port 8621. Built on `@companion-module/base` ^1.14.1 for [Bitfocus Companion](https://bitfocus.io/companion).
 
 ## Commands
 
 - **Install**: `yarn install`
-- **Lint**: `npx eslint .` (ESLint config in `.eslintrc`, ES2018, eslint:recommended)
+- **Lint**: `npx eslint .` (flat config in `eslint.config.mjs` via `@companion-module/tools`, includes prettier)
 - **No build step**: Pure JavaScript (CommonJS), no transpilation
 - **No tests**: Test script is a stub; no test framework configured
 - **CI**: GitHub Actions workflow runs `bitfocus/actions` module-checks on all pushes
